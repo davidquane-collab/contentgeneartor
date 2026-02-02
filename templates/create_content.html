@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Create Content - {{ brand.brand_name }} - Deciphex Content Studio{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('brand_assets', brand_id=brand.id) }}">{{ brand.brand_name }}</a></li>
+        <li class="breadcrumb-item active">Create Content</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-magic me-2"></i>Create Content for {{ brand.brand_name }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('create_content', brand_id=brand.id) }}" id="contentForm">
+                    <!-- Step 1: Content Type -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <span class="badge bg-primary me-2">1</span>Select Content Type
+                        </label>
+                        <select class="form-select form-select-lg" id="asset_type" name="asset_type" required>
+                            <option value="">-- Choose content type --</option>
+                            {% for type in content_types %}
+                            <option value="{{ type }}">{{ type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Step 2: Target Audience -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <span class="badge bg-primary me-2">2</span>Select Target Audience
+                        </label>
+                        {% if audiences %}
+                        <select class="form-select" id="audience_id" name="audience_id">
+                            <option value="">-- Select from extracted audiences or enter custom --</option>
+                            {% for audience in audiences %}
+                            <option value="{{ audience.id }}" data-description="{{ audience.audience_description }}">
+                                {{ audience.audience_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div id="audienceDescription" class="form-text mt-2 p-2 bg-light rounded" style="display: none;"></div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>No audiences extracted yet. Upload Marketing Materials to automatically extract audiences, or enter a custom audience below.
+                        </div>
+                        {% endif %}
+
+                        <div class="mt-3">
+                            <label for="custom_audience" class="form-label">Or enter custom audience:</label>
+                            <input type="text" class="form-control" id="custom_audience" name="custom_audience" placeholder="e.g., Hospital IT Decision Makers, Pathology Lab Directors">
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Additional Context -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <span class="badge bg-primary me-2">3</span>Additional Context (Optional)
+                        </label>
+                        <textarea class="form-control" id="additional_context" name="additional_context" rows="4" placeholder="Enter any specific requirements, key messages to emphasize, constraints, or context..."></textarea>
+                        <div class="form-text">
+                            Examples: "Focus on workflow efficiency", "Include ROI messaging", "Emphasize ease of integration"
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg" id="generateBtn">
+                            <i class="bi bi-stars me-2"></i>Generate Content
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Content Type Info -->
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Content Types
+                </h6>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div class="content-type-info">
+                    <div class="mb-2">
+                        <strong>Brochure</strong>
+                        <p class="small text-muted mb-2">Multi-page marketing document with detailed product information</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Postcard</strong>
+                        <p class="small text-muted mb-2">Concise front/back promotional piece</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Flyer</strong>
+                        <p class="small text-muted mb-2">Single-page promotional material</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Conference Backdrop</strong>
+                        <p class="small text-muted mb-2">Large format display messaging</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Email Campaign</strong>
+                        <p class="small text-muted mb-2">Marketing email with subject lines and body</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Social Media Post</strong>
+                        <p class="small text-muted mb-2">Platform-ready social content</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Website Copy</strong>
+                        <p class="small text-muted mb-2">Landing page or website section content</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Case Study</strong>
+                        <p class="small text-muted mb-2">Customer success story format</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>White Paper</strong>
+                        <p class="small text-muted mb-2">In-depth technical/educational document</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Data Sheet</strong>
+                        <p class="small text-muted mb-2">Technical specifications document</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Sales One-Pager</strong>
+                        <p class="small text-muted mb-2">Quick reference sales document</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Brand Assets Status -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-folder2 me-2"></i>Brand Assets
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    The AI will use your uploaded brand assets to generate on-brand content.
+                </p>
+                <a href="{{ url_for('brand_assets', brand_id=brand.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-folder2-open me-1"></i>View Assets
+                </a>
+                <a href="{{ url_for('upload_asset', brand_id=brand.id) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-upload me-1"></i>Upload More
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                <h5>Generating Your Content...</h5>
+                <p class="text-muted mb-0">This may take a moment as we craft on-brand content for you.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Show audience description when selected
+document.getElementById('audience_id')?.addEventListener('change', function() {
+    const selected = this.options[this.selectedIndex];
+    const description = selected.getAttribute('data-description');
+    const descDiv = document.getElementById('audienceDescription');
+
+    if (description && description.trim()) {
+        descDiv.textContent = description;
+        descDiv.style.display = 'block';
+    } else {
+        descDiv.style.display = 'none';
+    }
+
+    // Clear custom audience if a predefined one is selected
+    if (this.value) {
+        document.getElementById('custom_audience').value = '';
+    }
+});
+
+// Clear audience selection if custom is entered
+document.getElementById('custom_audience').addEventListener('input', function() {
+    if (this.value.trim()) {
+        const audienceSelect = document.getElementById('audience_id');
+        if (audienceSelect) {
+            audienceSelect.value = '';
+            document.getElementById('audienceDescription').style.display = 'none';
+        }
+    }
+});
+
+// Show loading modal on form submit
+document.getElementById('contentForm').addEventListener('submit', function(e) {
+    const assetType = document.getElementById('asset_type').value;
+    if (!assetType) {
+        e.preventDefault();
+        alert('Please select a content type');
+        return;
+    }
+
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    new bootstrap.Modal(document.getElementById('loadingModal')).show();
+});
+</script>
+{% endblock %}

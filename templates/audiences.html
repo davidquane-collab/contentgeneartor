@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}{{ brand.brand_name }} Audiences - Deciphex Content Studio{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('brand_assets', brand_id=brand.id) }}">{{ brand.brand_name }}</a></li>
+        <li class="breadcrumb-item active">Audiences</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">
+            <i class="bi bi-people me-2"></i>{{ brand.brand_name }} Target Audiences
+        </h2>
+        <p class="text-muted mb-0">Manage target audiences for content generation</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAudienceModal">
+        <i class="bi bi-plus-lg me-2"></i>Add Audience
+    </button>
+</div>
+
+{% if audiences %}
+<div class="row">
+    {% for audience in audiences %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-person-badge me-2 text-primary"></i>{{ audience.audience_name }}
+                </h5>
+                <p class="card-text text-muted">{{ audience.audience_description or 'No description' }}</p>
+                {% if audience.extracted_from %}
+                <small class="text-muted">
+                    <i class="bi bi-file-earmark me-1"></i>Extracted from: {{ audience.extracted_from }}
+                </small>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-transparent">
+                <button class="btn btn-sm btn-outline-primary" onclick="showEditAudience({{ audience.id }}, '{{ audience.audience_name }}', '{{ audience.audience_description|e }}')">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </button>
+                {% if current_user.is_admin %}
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteAudience({{ audience.id }}, '{{ audience.audience_name }}')">
+                    <i class="bi bi-trash me-1"></i>Delete
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-people display-1 text-muted"></i>
+    <h5 class="mt-3 text-muted">No audiences found</h5>
+    <p class="text-muted">Upload Marketing Materials to automatically extract audiences, or add them manually.</p>
+    <div class="d-flex justify-content-center gap-2">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAudienceModal">
+            <i class="bi bi-plus-lg me-2"></i>Add Audience
+        </button>
+        <a href="{{ url_for('upload_asset', brand_id=brand.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-upload me-2"></i>Upload Marketing Material
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Add Audience Modal -->
+<div class="modal fade" id="addAudienceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Audience</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="audienceName" class="form-label">Audience Name</label>
+                    <input type="text" class="form-control" id="audienceName" placeholder="e.g., Pathology Lab Directors" required>
+                </div>
+                <div class="mb-3">
+                    <label for="audienceDescription" class="form-label">Description</label>
+                    <textarea class="form-control" id="audienceDescription" rows="3" placeholder="Describe this audience's characteristics, needs, and pain points..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addAudience()">Add Audience</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Audience Modal -->
+<div class="modal fade" id="editAudienceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Audience</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editAudienceId">
+                <div class="mb-3">
+                    <label for="editAudienceName" class="form-label">Audience Name</label>
+                    <input type="text" class="form-control" id="editAudienceName" required>
+                </div>
+                <div class="mb-3">
+                    <label for="editAudienceDescription" class="form-label">Description</label>
+                    <textarea class="form-control" id="editAudienceDescription" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveAudience()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const brandId = {{ brand.id }};
+
+function addAudience() {
+    const name = document.getElementById('audienceName').value.trim();
+    const description = document.getElementById('audienceDescription').value.trim();
+
+    if (!name) {
+        alert('Please enter an audience name');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('description', description);
+
+    fetch(`/brand/${brandId}/audience/add`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function showEditAudience(id, name, description) {
+    document.getElementById('editAudienceId').value = id;
+    document.getElementById('editAudienceName').value = name;
+    document.getElementById('editAudienceDescription').value = description;
+    new bootstrap.Modal(document.getElementById('editAudienceModal')).show();
+}
+
+function saveAudience() {
+    const id = document.getElementById('editAudienceId').value;
+    const name = document.getElementById('editAudienceName').value.trim();
+    const description = document.getElementById('editAudienceDescription').value.trim();
+
+    if (!name) {
+        alert('Please enter an audience name');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('description', description);
+
+    fetch(`/audience/${id}/edit`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function deleteAudience(id, name) {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
+        return;
+    }
+
+    fetch(`/audience/${id}/delete`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+</script>
+{% endblock %}

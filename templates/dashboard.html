@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Deciphex Content Studio{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-0">
+            <i class="bi bi-speedometer2 me-2"></i>Welcome, {{ current_user.username }}!
+        </h2>
+        <p class="text-muted">Select a brand to upload assets or create content</p>
+    </div>
+</div>
+
+<!-- Brand Cards -->
+<div class="row mb-5">
+    {% for brand in brands %}
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card brand-card h-100 shadow-sm">
+            <div class="card-body">
+                <div class="brand-icon mb-3">
+                    {% if brand.brand_name == 'Deciphex' %}
+                    <i class="bi bi-building text-primary"></i>
+                    {% elif brand.brand_name == 'Diagnexia' %}
+                    <i class="bi bi-heart-pulse text-danger"></i>
+                    {% elif brand.brand_name == 'Diagnexia Analytix' %}
+                    <i class="bi bi-graph-up text-success"></i>
+                    {% else %}
+                    <i class="bi bi-microscope text-info"></i>
+                    {% endif %}
+                </div>
+                <h5 class="card-title">{{ brand.brand_name }}</h5>
+                <p class="card-text text-muted small">{{ brand.description }}</p>
+                <div class="badge bg-secondary mb-3">
+                    <i class="bi bi-file-earmark me-1"></i>{{ brand.asset_count }} assets
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('upload_asset', brand_id=brand.id) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-upload me-1"></i>Upload Assets
+                    </a>
+                    <a href="{{ url_for('create_content', brand_id=brand.id) }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-magic me-1"></i>Create Content
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h4 class="mb-3">
+            <i class="bi bi-lightning me-2"></i>Quick Actions
+        </h4>
+    </div>
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card bg-light h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-folder2-open display-4 text-primary mb-2"></i>
+                <h6>Browse All Assets</h6>
+                <div class="d-flex flex-wrap justify-content-center gap-1 mt-2">
+                    {% for brand in brands %}
+                    <a href="{{ url_for('brand_assets', brand_id=brand.id) }}" class="btn btn-sm btn-outline-secondary">
+                        {{ brand.brand_name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card bg-light h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-people display-4 text-success mb-2"></i>
+                <h6>Manage Audiences</h6>
+                <div class="d-flex flex-wrap justify-content-center gap-1 mt-2">
+                    {% for brand in brands %}
+                    <a href="{{ url_for('brand_audiences', brand_id=brand.id) }}" class="btn btn-sm btn-outline-secondary">
+                        {{ brand.brand_name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if current_user.is_admin %}
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card bg-light h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-gear display-4 text-secondary mb-2"></i>
+                <h6>Administration</h6>
+                <a href="{{ url_for('admin_panel') }}" class="btn btn-sm btn-outline-primary mt-2">
+                    <i class="bi bi-sliders me-1"></i>Open Admin Panel
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Recent Content -->
+{% if recent_content %}
+<div class="row">
+    <div class="col-12">
+        <h4 class="mb-3">
+            <i class="bi bi-clock-history me-2"></i>Recent Content
+        </h4>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Brand</th>
+                        <th>Type</th>
+                        <th>Audience</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for content in recent_content %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-primary">{{ content.brand_name }}</span>
+                        </td>
+                        <td>{{ content.asset_type }}</td>
+                        <td>{{ content.target_audience or 'N/A' }}</td>
+                        <td>{{ content.created_at }}</td>
+                        <td>
+                            <a href="{{ url_for('review_content', content_id=content.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

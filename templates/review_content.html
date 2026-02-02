@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Review Content - Deciphex Content Studio{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('brand_assets', brand_id=content.brand_id) }}">{{ content.brand_name }}</a></li>
+        <li class="breadcrumb-item active">Review Content</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Content Card -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-file-earmark-text me-2"></i>{{ content.asset_type }} for {{ content.brand_name }}
+                </h5>
+                <button class="btn btn-light btn-sm" onclick="copyContent()">
+                    <i class="bi bi-clipboard me-1"></i>Copy
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="content-display p-3 bg-light rounded" id="contentDisplay">
+                    <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ content.content }}</pre>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <small class="text-muted">
+                    <i class="bi bi-person me-1"></i>Created by {{ content.username }}
+                    <i class="bi bi-clock ms-3 me-1"></i>{{ content.created_at }}
+                    {% if content.target_audience %}
+                    <i class="bi bi-people ms-3 me-1"></i>{{ content.target_audience }}
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+
+        <!-- Regulatory Check Results -->
+        <div class="card mb-4" id="regulatoryCard" style="{% if not content.regulatory_flags %}display: none;{% endif %}">
+            <div class="card-header bg-warning">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-shield-check me-2"></i>Regulatory Check Results
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="regulatoryResults">
+                    {% if content.regulatory_flags %}
+                    <pre style="white-space: pre-wrap; font-family: inherit;">{{ content.regulatory_flags }}</pre>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Design Brief Results -->
+        <div class="card mb-4" id="designBriefCard" style="{% if not content.design_brief %}display: none;{% endif %}">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-palette me-2"></i>Design Brief
+                </h6>
+                <button class="btn btn-light btn-sm" onclick="copyDesignBrief()">
+                    <i class="bi bi-clipboard me-1"></i>Copy Email
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="designBriefResults">
+                    {% if content.design_brief %}
+                    <pre style="white-space: pre-wrap; font-family: inherit;">{{ content.design_brief }}</pre>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Action Buttons -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-warning" onclick="runRegulatoryCheck()" id="regulatoryBtn">
+                        <i class="bi bi-shield-check me-2"></i>Run Regulatory Check
+                    </button>
+                    <button class="btn btn-info text-white" onclick="generateDesignBrief()" id="designBriefBtn">
+                        <i class="bi bi-palette me-2"></i>Generate Design Brief
+                    </button>
+                    <hr>
+                    <a href="{{ url_for('create_content', brand_id=content.brand_id) }}" class="btn btn-success">
+                        <i class="bi bi-plus-lg me-2"></i>Create New Content
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-house me-2"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Details -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Content Details
+                </h6>
+            </div>
+            <div class="card-body">
+                <dl class="mb-0">
+                    <dt>Brand</dt>
+                    <dd>{{ content.brand_name }}</dd>
+
+                    <dt>Content Type</dt>
+                    <dd>{{ content.asset_type }}</dd>
+
+                    <dt>Target Audience</dt>
+                    <dd>{{ content.target_audience or 'Not specified' }}</dd>
+
+                    {% if content.additional_context %}
+                    <dt>Additional Context</dt>
+                    <dd class="small">{{ content.additional_context }}</dd>
+                    {% endif %}
+
+                    <dt>Created</dt>
+                    <dd>{{ content.created_at }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                <h5 id="loadingText">Processing...</h5>
+                <p class="text-muted mb-0" id="loadingSubtext">Please wait...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast for copy confirmation -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="copyToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="bi bi-check-circle text-success me-2"></i>
+            <strong class="me-auto">Copied!</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            Content copied to clipboard
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const contentId = {{ content.id }};
+let loadingModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+});
+
+function showLoading(text, subtext) {
+    document.getElementById('loadingText').textContent = text;
+    document.getElementById('loadingSubtext').textContent = subtext;
+    loadingModal.show();
+}
+
+function hideLoading() {
+    loadingModal.hide();
+}
+
+function showToast(message) {
+    document.querySelector('#copyToast .toast-body').textContent = message;
+    new bootstrap.Toast(document.getElementById('copyToast')).show();
+}
+
+function copyContent() {
+    const content = document.getElementById('contentDisplay').innerText;
+    navigator.clipboard.writeText(content).then(() => {
+        showToast('Content copied to clipboard');
+    });
+}
+
+function copyDesignBrief() {
+    const content = document.getElementById('designBriefResults').innerText;
+    navigator.clipboard.writeText(content).then(() => {
+        showToast('Design brief copied to clipboard');
+    });
+}
+
+function runRegulatoryCheck() {
+    showLoading('Running Regulatory Check...', 'Analyzing content against compliance guidelines');
+
+    const btn = document.getElementById('regulatoryBtn');
+    btn.disabled = true;
+
+    fetch(`/content/${contentId}/regulatory-check`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        btn.disabled = false;
+
+        if (data.success) {
+            document.getElementById('regulatoryResults').innerHTML =
+                '<pre style="white-space: pre-wrap; font-family: inherit;">' + escapeHtml(data.result) + '</pre>';
+            document.getElementById('regulatoryCard').style.display = 'block';
+
+            // Scroll to results
+            document.getElementById('regulatoryCard').scrollIntoView({ behavior: 'smooth' });
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        btn.disabled = false;
+        alert('Error: ' + error.message);
+    });
+}
+
+function generateDesignBrief() {
+    showLoading('Generating Design Brief...', 'Creating comprehensive design specifications');
+
+    const btn = document.getElementById('designBriefBtn');
+    btn.disabled = true;
+
+    fetch(`/content/${contentId}/design-brief`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        btn.disabled = false;
+
+        if (data.success) {
+            document.getElementById('designBriefResults').innerHTML =
+                '<pre style="white-space: pre-wrap; font-family: inherit;">' + escapeHtml(data.result) + '</pre>';
+            document.getElementById('designBriefCard').style.display = 'block';
+
+            // Scroll to results
+            document.getElementById('designBriefCard').scrollIntoView({ behavior: 'smooth' });
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        btn.disabled = false;
+        alert('Error: ' + error.message);
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

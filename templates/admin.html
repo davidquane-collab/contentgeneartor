@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel - Deciphex Content Studio{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">
+            <i class="bi bi-gear me-2"></i>Admin Panel
+        </h2>
+        <p class="text-muted mb-0">Manage users, view activity, and system settings</p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+    </a>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-0">{{ users|length }}</h3>
+                        <p class="mb-0">Total Users</p>
+                    </div>
+                    <i class="bi bi-people display-4 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% for stat in brand_stats %}
+    <div class="col-md-4 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-0">{{ stat.asset_count }}</h3>
+                        <p class="mb-0">{{ stat.name }} Assets</p>
+                    </div>
+                    <i class="bi bi-file-earmark display-4 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row">
+    <!-- User Management -->
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-people me-2"></i>User Management
+                </h5>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                    <i class="bi bi-person-plus me-1"></i>Add User
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-person-circle me-2 text-primary"></i>
+                                    {{ user.username }}
+                                </td>
+                                <td>{{ user.email or '-' }}</td>
+                                <td>
+                                    {% if user.is_admin %}
+                                    <span class="badge bg-danger">Admin</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">User</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td class="small">{{ user.created_at }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="showResetPassword({{ user.id }}, '{{ user.username }}')" title="Reset Password">
+                                            <i class="bi bi-key"></i>
+                                        </button>
+                                        {% if user.id != current_user.id %}
+                                        {% if user.is_active %}
+                                        <button class="btn btn-outline-warning" onclick="toggleUserStatus({{ user.id }}, false)" title="Deactivate">
+                                            <i class="bi bi-person-dash"></i>
+                                        </button>
+                                        {% else %}
+                                        <button class="btn btn-outline-success" onclick="toggleUserStatus({{ user.id }}, true)" title="Activate">
+                                            <i class="bi bi-person-check"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-activity me-2"></i>Recent Activity
+                </h5>
+            </div>
+            <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                <ul class="list-group list-group-flush">
+                    {% for entry in activity %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong class="text-primary">{{ entry.username }}</strong>
+                                <span class="text-muted">{{ entry.action }}</span>
+                            </div>
+                            <small class="text-muted">{{ entry.created_at }}</small>
+                        </div>
+                        {% if entry.details %}
+                        <small class="text-muted d-block">{{ entry.details }}</small>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_user') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required minlength="8">
+                        <div class="form-text">Minimum 8 characters</div>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin">
+                        <label class="form-check-label" for="is_admin">Admin privileges</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reset Password for <span id="resetUsername"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="resetUserId">
+                <div class="mb-3">
+                    <label for="newPassword" class="form-label">New Password</label>
+                    <input type="password" class="form-control" id="newPassword" required minlength="8">
+                    <div class="form-text">Minimum 8 characters</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="resetPassword()">Reset Password</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showResetPassword(userId, username) {
+    document.getElementById('resetUserId').value = userId;
+    document.getElementById('resetUsername').textContent = username;
+    document.getElementById('newPassword').value = '';
+    new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+}
+
+function resetPassword() {
+    const userId = document.getElementById('resetUserId').value;
+    const password = document.getElementById('newPassword').value;
+
+    if (password.length < 8) {
+        alert('Password must be at least 8 characters');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('password', password);
+
+    fetch(`/admin/user/${userId}/reset-password`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal')).hide();
+            alert('Password reset successfully');
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function toggleUserStatus(userId, activate) {
+    const action = activate ? 'activate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${action} this user?`)) {
+        return;
+    }
+
+    fetch(`/admin/user/${userId}/${action}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+</script>
+{% endblock %}
