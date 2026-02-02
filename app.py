@@ -593,10 +593,11 @@ def file_too_large(error):
     return redirect(request.url)
 
 
-if __name__ == '__main__':
-    # Ensure upload directory exists
-    os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
+# Ensure upload directory exists (runs on import for gunicorn)
+os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
 
+
+if __name__ == '__main__':
     # Run the application (use PORT env var for Render deployment)
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
