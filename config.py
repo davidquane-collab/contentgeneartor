@@ -17,9 +17,9 @@ class Config:
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB max file size
     ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt', 'pptx'}
 
-    # Claude API settings
-    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
-    CLAUDE_MODEL = 'claude-sonnet-4-5-20250929'
+    # OpenAI API settings
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+    OPENAI_MODEL = 'gpt-4o'
 
     # Session settings
     SESSION_TIMEOUT_MINUTES = 60

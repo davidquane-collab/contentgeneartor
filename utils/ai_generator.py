@@ -1,15 +1,15 @@
 import json
 import time
-from anthropic import Anthropic
+from openai import OpenAI
 from config import Config
 from utils.database import get_brand_assets, get_brand_by_id, get_audience_by_id
 
 
-def get_claude_client():
-    """Get Anthropic client."""
-    if not Config.ANTHROPIC_API_KEY:
-        raise ValueError("ANTHROPIC_API_KEY not configured")
-    return Anthropic(api_key=Config.ANTHROPIC_API_KEY)
+def get_openai_client():
+    """Get OpenAI client."""
+    if not Config.OPENAI_API_KEY:
+        raise ValueError("OPENAI_API_KEY not configured")
+    return OpenAI(api_key=Config.OPENAI_API_KEY)
 
 
 def extract_relevant_assets_text(brand_id, asset_types=None, max_chars=10000):
@@ -27,7 +27,7 @@ def extract_relevant_assets_text(brand_id, asset_types=None, max_chars=10000):
 
 
 def generate_content(brand_id, asset_type, audience_id, custom_audience, additional_context, retries=3):
-    """Generate content using Claude API."""
+    """Generate content using OpenAI API."""
     brand = get_brand_by_id(brand_id)
     if not brand:
         return None, "Brand not found"
@@ -60,23 +60,28 @@ def generate_content(brand_id, asset_type, audience_id, custom_audience, additio
         max_chars=3000
     )
 
-    # Build the prompt
-    prompt = f"""You are creating {asset_type} content for {brand['brand_name']}.
+    # Build the system message for better context
+    system_message = f"""You are an expert marketing content creator specializing in healthcare and medical technology marketing. You create compelling, on-brand content that adheres to regulatory guidelines.
+
+Your task is to create {asset_type} content for {brand['brand_name']}.
 
 BRAND OVERVIEW:
 {brand['description']}
 
-BRAND CONTEXT AND PRODUCT INFORMATION:
-{brand_context if brand_context else "No specific brand assets uploaded yet. Create content based on general knowledge of digital pathology and AI-powered diagnostic solutions."}
-
 TONE & STYLE REFERENCE (match this style):
 {tone_reference if tone_reference else "Professional, innovative, and trustworthy. Focus on clinical outcomes and efficiency gains."}
 
+REGULATORY CONSIDERATIONS:
+{regulatory_context if regulatory_context else "Ensure all claims are substantiated and avoid making diagnostic claims that would require FDA clearance. Focus on workflow improvements and efficiency gains rather than diagnostic accuracy claims."}"""
+
+    # Build the user prompt
+    user_prompt = f"""Create {asset_type} content for {brand['brand_name']} with the following specifications:
+
+BRAND CONTEXT AND PRODUCT INFORMATION:
+{brand_context if brand_context else "No specific brand assets uploaded yet. Create content based on general knowledge of digital pathology and AI-powered diagnostic solutions."}
+
 TARGET AUDIENCE:
 {audience_text if audience_text else "Healthcare professionals and pathology laboratory decision-makers"}
-
-REGULATORY CONSIDERATIONS:
-{regulatory_context if regulatory_context else "Ensure all claims are substantiated and avoid making diagnostic claims that would require FDA clearance. Focus on workflow improvements and efficiency gains rather than diagnostic accuracy claims."}
 
 ADDITIONAL REQUIREMENTS:
 {additional_context if additional_context else "None specified"}
@@ -93,19 +98,20 @@ Format Guidelines for {asset_type}:
 
 Generate the content now:"""
 
-    # Call Claude API with retries
-    client = get_claude_client()
+    # Call OpenAI API with retries
+    client = get_openai_client()
 
     for attempt in range(retries):
         try:
-            message = client.messages.create(
-                model=Config.CLAUDE_MODEL,
+            response = client.chat.completions.create(
+                model=Config.OPENAI_MODEL,
                 max_tokens=4096,
                 messages=[
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_prompt}
                 ]
             )
-            return message.content[0].text, None
+            return response.choices[0].message.content, None
         except Exception as e:
             if attempt < retries - 1:
                 time.sleep(2 ** attempt)  # Exponential backoff
@@ -233,7 +239,9 @@ def run_regulatory_check(content, brand_id, retries=3):
         max_chars=6000
     )
 
-    prompt = f"""You are a regulatory compliance reviewer for healthcare/medical device marketing content.
+    system_message = """You are a regulatory compliance expert specializing in healthcare and medical device marketing content review. You have deep knowledge of FDA regulations, FTC advertising guidelines, and healthcare marketing compliance requirements."""
+
+    user_prompt = f"""Review the following marketing content for regulatory compliance issues.
 
 CONTENT TO REVIEW:
 {content}
@@ -265,18 +273,19 @@ If no issues are found, respond with:
 
 Provide your analysis in a clear, structured format:"""
 
-    client = get_claude_client()
+    client = get_openai_client()
 
     for attempt in range(retries):
         try:
-            message = client.messages.create(
-                model=Config.CLAUDE_MODEL,
+            response = client.chat.completions.create(
+                model=Config.OPENAI_MODEL,
                 max_tokens=2048,
                 messages=[
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_prompt}
                 ]
             )
-            return message.content[0].text, None
+            return response.choices[0].message.content, None
         except Exception as e:
             if attempt < retries - 1:
                 time.sleep(2 ** attempt)
@@ -297,7 +306,9 @@ def generate_design_brief(content, asset_type, brand_id, retries=3):
         max_chars=3000
     )
 
-    prompt = f"""You are creating a design brief for an external designer to create a {asset_type} for {brand['brand_name']}.
+    system_message = """You are an experienced creative director who creates comprehensive design briefs for marketing materials. You understand healthcare and medical technology branding, and you provide detailed, actionable guidance for designers."""
+
+    user_prompt = f"""Create a design brief for an external designer to create a {asset_type} for {brand['brand_name']}.
 
 CONTENT TO BE DESIGNED:
 {content}
@@ -366,18 +377,19 @@ Subject: Design Brief: {asset_type} for {brand['brand_name']}
 
 [Email body with the brief]"""
 
-    client = get_claude_client()
+    client = get_openai_client()
 
     for attempt in range(retries):
         try:
-            message = client.messages.create(
-                model=Config.CLAUDE_MODEL,
+            response = client.chat.completions.create(
+                model=Config.OPENAI_MODEL,
                 max_tokens=3000,
                 messages=[
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_prompt}
                 ]
             )
-            return message.content[0].text, None
+            return response.choices[0].message.content, None
         except Exception as e:
             if attempt < retries - 1:
                 time.sleep(2 ** attempt)
@@ -389,7 +401,9 @@ Subject: Design Brief: {asset_type} for {brand['brand_name']}
 
 def extract_audiences_from_document(text, brand_id, document_name, retries=3):
     """Extract target audiences from a marketing document."""
-    prompt = f"""Analyze this marketing document and extract all mentioned target audiences or customer segments.
+    system_message = """You are a marketing analyst who excels at identifying and categorizing target audiences from marketing documents. You return structured JSON data."""
+
+    user_prompt = f"""Analyze this marketing document and extract all mentioned target audiences or customer segments.
 
 DOCUMENT CONTENT:
 {text[:8000]}
@@ -410,19 +424,20 @@ Only include audiences that are clearly identifiable customer segments. Do not i
 
 Return ONLY the JSON array, no other text:"""
 
-    client = get_claude_client()
+    client = get_openai_client()
 
     for attempt in range(retries):
         try:
-            message = client.messages.create(
-                model=Config.CLAUDE_MODEL,
+            response = client.chat.completions.create(
+                model=Config.OPENAI_MODEL,
                 max_tokens=1500,
                 messages=[
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_prompt}
                 ]
             )
 
-            response_text = message.content[0].text.strip()
+            response_text = response.choices[0].message.content.strip()
 
             # Clean up response if it has markdown code blocks
             if response_text.startswith("```"):

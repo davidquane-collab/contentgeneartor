@@ -5,7 +5,7 @@ A private web application for Deciphex's marketing team to generate branded mark
 ## Features
 
 - **Brand Asset Management**: Upload and organize brand materials (PDFs, DOCX, TXT, PPTX) for each brand
-- **AI Content Generation**: Generate various marketing content types using Claude AI
+- **AI Content Generation**: Generate various marketing content types using OpenAI GPT-4o
 - **Regulatory Checker**: Automatically review generated content for compliance issues
 - **Design Brief Generator**: Create comprehensive design briefs for external designers
 - **Audience Extraction**: Automatically extract target audiences from marketing materials
@@ -30,7 +30,7 @@ A private web application for Deciphex's marketing team to generate branded mark
 
 - Python 3.8+
 - pip (Python package manager)
-- Anthropic API key
+- OpenAI API key
 
 ## Installation
 
@@ -61,10 +61,10 @@ Create a `.env` file in the project root:
 cp .env.example .env
 ```
 
-Edit `.env` and add your Anthropic API key:
+Edit `.env` and add your OpenAI API key:
 
 ```
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
 SECRET_KEY=your_secret_key_here
 ```
 
@@ -172,16 +172,16 @@ After content is generated, you can:
 
 ## API Configuration
 
-The application uses Claude claude-sonnet-4-5-20250929 by default. To change the model, edit `config.py`:
+The application uses OpenAI GPT-4o by default. To change the model, edit `config.py`:
 
 ```python
-CLAUDE_MODEL = 'claude-sonnet-4-5-20250929'  # or another Claude model
+OPENAI_MODEL = 'gpt-4o'  # or another OpenAI model like 'gpt-4-turbo' or 'gpt-3.5-turbo'
 ```
 
 ## Troubleshooting
 
 ### API Key Issues
-- Ensure your `ANTHROPIC_API_KEY` is correctly set in the `.env` file
+- Ensure your `OPENAI_API_KEY` is correctly set in the `.env` file
 - Verify the API key is valid and has sufficient credits
 
 ### File Upload Issues
