@@ -1,4 +1,5 @@
 import json
+import os
 import time
 from openai import OpenAI
 from config import Config
@@ -7,9 +8,10 @@ from utils.database import get_brand_assets, get_brand_by_id, get_audience_by_id
 
 def get_openai_client():
     """Get OpenAI client."""
-    if not Config.OPENAI_API_KEY:
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not api_key:
         raise ValueError("OPENAI_API_KEY not configured")
-    return OpenAI(api_key=Config.OPENAI_API_KEY)
+    return OpenAI(api_key=api_key)
 
 
 def extract_relevant_assets_text(brand_id, asset_types=None, max_chars=10000):
