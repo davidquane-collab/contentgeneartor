@@ -193,6 +193,61 @@ OPENAI_MODEL = 'gpt-4o'  # or another OpenAI model like 'gpt-4-turbo' or 'gpt-3.
 - Delete `database/content_studio.db` to reset the database
 - The database and default data will be recreated on next startup
 
+## Pushing to GitHub
+
+1. **Create a new repository** on [GitHub](https://github.com/new) (do not initialize with a README if this project already has one).
+
+2. **From your project folder**, run:
+
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit: Deciphex Content Studio"
+   git branch -M main
+   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+   git push -u origin main
+   ```
+
+   Replace `YOUR_USERNAME` and `YOUR_REPO_NAME` with your GitHub username and repository name.
+
+3. **Ensure secrets are not committed**: The `.gitignore` already excludes `.env`, `database/*.db`, and `uploads/*`. Never commit `.env` or any file containing API keys or passwords.
+
+## Deploying to Render
+
+After your code is on GitHub, you can deploy to [Render](https://render.com) so the app runs in the cloud.
+
+### One-time setup on Render
+
+1. **Sign in** at [dashboard.render.com](https://dashboard.render.com) and connect your GitHub account if needed.
+
+2. **New → Web Service**, then select your repository (e.g. `contentgeneartor` or the repo you pushed).
+
+3. **Configure the service:**
+   - **Name:** e.g. `content-studio`
+   - **Region:** Choose closest to your users
+   - **Branch:** `main` (or your default branch)
+   - **Runtime:** Python 3
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `gunicorn --bind 0.0.0.0:$PORT app:app`  
+     (Render sets `PORT` automatically; the repo also includes a `Procfile` that uses this.)
+
+4. **Environment variables** (required):
+   - `OPENAI_API_KEY` – your OpenAI API key
+   - `SECRET_KEY` – a long random string (e.g. generate with:  
+     `python -c "import secrets; print(secrets.token_hex(32))"`)
+
+5. Click **Create Web Service**. Render will build and deploy; your app will be available at `https://<your-service-name>.onrender.com`.
+
+### Using the Blueprint (optional)
+
+The repo includes a `render.yaml` blueprint. In the Render dashboard you can use **New → Blueprint** and point it at this repo; Render will create the web service from the blueprint. You still need to set `OPENAI_API_KEY` (and optionally `SECRET_KEY`) in the service’s **Environment** tab.
+
+### Important notes for Render
+
+- **Ephemeral filesystem:** Render’s disk is not persistent. The SQLite database and uploaded files will be recreated/lost on each deploy or restart. For a production setup you may later add a [Render Persistent Disk](https://render.com/docs/disks) for `uploads` and the database directory, or switch to a managed database (e.g. PostgreSQL).
+- **Cold starts:** Free-tier web services spin down after inactivity; the first request after idle may take 30–60 seconds.
+- **HTTPS:** Render provides HTTPS by default for your service URL.
+
 ## License
 
 Private - Deciphex Internal Use Only
